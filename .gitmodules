@@ -1,0 +1,3 @@
+[submodule "plugins/steam-playtime-dashboard"]
+	path = plugins/steam-playtime-dashboard
+	url = https://github.com/ak4duy/steam-playtime-dashboard
