@@ -1,8 +1,8 @@
 {
   "scripts": {
-    "dev": "./node_modules/.bin/starlight watch",
-    "build": "./node_modules/.bin/starlight pack",
-    "prepare": "./node_modules/.bin/starlight lsp",
+    "dev": "starlight watch",
+    "build": "starlight pack",
+    "prepare": "starlight lsp",
     "test": "bun test",
     "typecheck": "bunx -p typescript@5.6.3 tsc --noEmit -p frontend"
   },
