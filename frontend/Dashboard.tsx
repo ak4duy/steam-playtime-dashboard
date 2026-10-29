@@ -102,6 +102,14 @@ const CSS = `
 .ptd-chart text { font-size: 11px; fill: var(--muted); }
 .ptd-donut { display: block; width: 160px; margin: 0 auto; }
 .ptd-donut circle:hover { stroke-width: 26; }
+.ptd-ach { display: grid; gap: 10px; list-style: none; margin: 0; padding: 0; font-size: 14px; }
+.ptd-ach li { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; gap: 12px; align-items: center; }
+.ptd-ach img { width: 40px; height: 40px; border-radius: 3px; background: var(--well); }
+.ptd-ach b, .ptd-ach small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ptd-ach b { font-weight: 600; color: var(--white); }
+.ptd-ach small, .ptd-ach em { font-size: 12px; color: var(--muted); }
+.ptd-ach em { font-style: normal; text-align: right; font-variant-numeric: tabular-nums; }
+.ptd-ach .ptd-rare { color: var(--limit); }
 `;
 
 const SERIES = [
@@ -144,6 +152,10 @@ const DEFAULT_FILTERS: Filters = {
   platform: "",
   launchSource: "",
 };
+
+type Achievement = Awaited<
+  ReturnType<typeof SteamClient.Apps.GetMyAchievementsForApp>
+>["data"]["rgAchievements"][number];
 
 const overview = (appId: number) =>
   window.appStore?.GetAppOverviewByAppID(appId);
@@ -845,6 +857,132 @@ function Donut({
   );
 }
 
+// shortcut: cached until Steam restarts, so unlocks made while the dashboard is loaded show after a restart
+const achievementCache = new Map<string, Promise<Achievement[]>>();
+const loadAchievements = (id: string) => {
+  if (!achievementCache.has(id))
+    achievementCache.set(
+      id,
+      SteamClient.Apps.GetMyAchievementsForApp(id).then(
+        (r) => r?.data?.rgAchievements ?? [],
+        () => (achievementCache.delete(id), []),
+      ),
+    );
+  return achievementCache.get(id)!;
+};
+
+function useAchievements(ids: string[]) {
+  const [byGame, setByGame] = useState(new Map<string, Achievement[]>());
+  const key = ids.join();
+  useEffect(() => {
+    let live = true;
+    setByGame(new Map());
+    ids.forEach((id) =>
+      loadAchievements(id).then(
+        (list) =>
+          live &&
+          setByGame((prev) =>
+            new Map([...prev, [id, list] as [string, Achievement[]]]),
+          ),
+      ),
+    );
+    return () => {
+      live = false;
+    };
+  }, [key]);
+  return new Map(
+    ids.filter((id) => byGame.has(id)).map((id) => [id, byGame.get(id)!]),
+  );
+}
+
+const unlockedSince = (list: Achievement[], from: number) =>
+  list.filter((a) => a.bAchieved && a.rtUnlocked * 1000 >= from);
+
+function Achievements({
+  byGame,
+  from,
+}: {
+  byGame: Map<string, Achievement[]>;
+  from: number;
+}) {
+  const games = [...byGame].filter(([, list]) => list.length);
+  const recent = games
+    .flatMap(([id, list]) => unlockedSince(list, from).map((a) => ({ id, a })))
+    .sort((x, y) => y.a.rtUnlocked - x.a.rtUnlocked)
+    .slice(0, 8);
+  const progress = (
+    <section className="ptd-panel">
+      <h3>Achievement progress</h3>
+      <p></p>
+      {!games.length && (
+        <div className="ptd-empty">No achievements for these games.</div>
+      )}
+      <div className="ptd-bars">
+        {games.map(([id, list]) => {
+          const name = gameName({ appId: Number(id) });
+          const icon = gameIcon(Number(id));
+          const got = list.filter((a) => a.bAchieved).length;
+          return (
+            <div
+              className="ptd-row"
+              key={id}
+              title={`${name}: ${got} of ${list.length}`}
+            >
+              <div className="ptd-game">
+                {icon && <img src={icon} alt="" />}
+                <span>{name}</span>
+              </div>
+              <div className="ptd-track">
+                <div
+                  className="ptd-fill"
+                  style={{ width: `${(got / list.length) * 100}%` }}
+                />
+              </div>
+              <div className="ptd-value">
+                {got}/{list.length}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+  if (!recent.length) return null;
+  return (
+    <div className="ptd-grid">
+      {progress}
+      <section className="ptd-panel">
+        <h3>Recent unlocks</h3>
+        <p></p>
+        <ul className="ptd-ach">
+          {recent.map(({ id, a }) => (
+            <li key={id + a.strID} title={a.strDescription}>
+              <img src={a.strImage} alt="" />
+              <div>
+                <b>{a.strName}</b>
+                <small>{gameName({ appId: Number(id) })}</small>
+              </div>
+              <em>
+                {new Date(a.rtUnlocked * 1000).toLocaleDateString(undefined, {
+                  month: "short",
+                  day: "numeric",
+                })}
+                {Number(a.flAchieved) > 0 && (
+                  <small
+                    className={a.flAchieved < 10 ? "ptd-rare" : undefined}
+                  >
+                    {Number(a.flAchieved).toFixed(1)}% of players
+                  </small>
+                )}
+              </em>
+            </li>
+          ))}
+        </ul>
+      </section>
+    </div>
+  );
+}
+
 function foldOther(
   rows: [string, number][],
   color: (key: string) => string,
@@ -885,6 +1023,9 @@ export function Dashboard() {
     dims.map((dim) => [dim, colorsFor(all, dim)]),
   ) as Record<Dimension, (key: string) => string>;
   const page = useRef<HTMLDivElement>(null);
+  const achievements = useAchievements(
+    gameRows.slice(0, 10).map(([id]) => id),
+  );
 
   return (
     <div className="ptd" ref={page}>
@@ -940,6 +1081,7 @@ export function Dashboard() {
       </div>
       <PlayRhythm sessions={range} />
       <GameTimeline sessions={range} color={colors.game} />
+      <Achievements byGame={achievements} from={from} />
       <div className="ptd-pies">
         <Donut
           title="Genres"
