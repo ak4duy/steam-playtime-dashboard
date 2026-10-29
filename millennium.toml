@@ -42,7 +42,7 @@ output_path = "auto"
 # socket = "/tmp/millennium-mep.sock"         # defaults to platform MEP path
 
 # Restart the plugin backend on any source change (default: true).
-auto_restart = true
+auto_restart = false
 
 # Reload Steam's UI frontend after a restart, depending on which files changed:
 #   "never"    = never reload the UI (default)
