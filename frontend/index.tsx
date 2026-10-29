@@ -12,12 +12,25 @@ function addProfileMenuItem() {
 	});
 	if (!MenuItems) return console.error('Playtime: profile menu not found');
 
-	beforePatch((window as any).SP_JSX_FACTORY, 'jsx', (args: any[]) => {
-		if (args[0] !== MenuItems) return;
-		const items: any[] = args[1]?.menuItems ?? [];
-		if (!items.some((item) => item?.name === '#Menu_Profile')) return;
-		args[1] = { ...args[1], menuItems: [...items, { name: 'SeparatorPlaytime' }, { name: 'Dashboard', route: ROUTE }] };
-	});
+	const factory = (window as any).SP_JSX_FACTORY;
+	const patch = () =>
+		beforePatch(factory, 'jsx', (args: any[]) => {
+			if (args[0] !== MenuItems) return;
+			const items: any[] = args[1]?.menuItems ?? [];
+			if (!items.some((item) => item?.name === '#Menu_Profile') || items.some((item) => item?.name === 'SeparatorPlaytime')) return;
+			args[1] = { ...args[1], menuItems: [...items, { name: 'SeparatorPlaytime' }, { name: 'Dashboard', route: ROUTE }] };
+		});
+	const isApplied = () => {
+		for (let fn = factory.jsx; fn; fn = fn.__millenniumPatch?.original) if (fn === current.patchedFunction) return true;
+		return false;
+	};
+	(window as any).playtimeMenuCleanup?.();
+	let current = patch();
+	const timer = setInterval(() => isApplied() || (current = patch()), 1000);
+	(window as any).playtimeMenuCleanup = () => {
+		clearInterval(timer);
+		if (isApplied()) current.unpatch();
+	};
 }
 
 const Icon = () => (
