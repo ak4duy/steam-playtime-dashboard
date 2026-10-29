@@ -1,8 +1,24 @@
-import { ButtonItem, definePlugin, Navigation, routerHook } from 'millennium';
+import { beforePatch, ButtonItem, definePlugin, findModuleByExport, Navigation, routerHook } from 'millennium';
 import { Dashboard } from './Dashboard';
 import { exportData, importData, startTracking } from './tracker';
 
 const ROUTE = '/playtime';
+
+function addProfileMenuItem() {
+	const menuModule = findModuleByExport((e) => e?.toString?.().includes('bSuperNavBehavior'));
+	const MenuItems = Object.values(menuModule ?? {}).find((e: any) => {
+		const src = e?.toString?.() ?? '';
+		return src.includes('disabledItemClass') && src.includes('menuItems') && src.includes('.map(') && !src.includes('bSuperNavBehavior');
+	});
+	if (!MenuItems) return console.error('Playtime: profile menu not found');
+
+	beforePatch((window as any).SP_JSX_FACTORY, 'jsx', (args: any[]) => {
+		if (args[0] !== MenuItems) return;
+		const items: any[] = args[1]?.menuItems ?? [];
+		if (!items.some((item) => item?.name === '#Menu_Profile')) return;
+		args[1] = { ...args[1], menuItems: [...items, { name: 'SeparatorPlaytime' }, { name: 'Dashboard', route: ROUTE }] };
+	});
+}
 
 const Icon = () => (
 	<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2">
@@ -14,6 +30,11 @@ const Icon = () => (
 export default definePlugin(() => {
 	startTracking().catch((e) => console.error('Playtime tracking disabled:', e));
 	routerHook.addRoute(ROUTE, Dashboard);
+	try {
+		addProfileMenuItem();
+	} catch (e) {
+		console.error('Playtime menu item disabled:', e);
+	}
 
 	return {
 		title: 'Playtime Dashboard',
