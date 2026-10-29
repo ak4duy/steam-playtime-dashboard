@@ -143,7 +143,7 @@ async function migrateLegacy(legacy: string): Promise<Data> {
 const readStore = (name: string) => backend.read_store(name).then(asText);
 
 async function load(): Promise<Data> {
-	const state = await retry(() => readStore('state'));
+	const state = await readStore('state');
 	const log = await readStore('log');
 	if (!log) {
 		const legacy = await readStore('legacy');
@@ -155,7 +155,7 @@ async function load(): Promise<Data> {
 
 export async function startTracking() {
 	try {
-		data = await load();
+		data = await retry(load);
 	} catch (e) {
 		toaster.toast({ title: 'Playtime tracking disabled', body: String(e) });
 		logError('Playtime tracking disabled: ' + e);
@@ -164,6 +164,7 @@ export async function startTracking() {
 	saved = data.sessions.length;
 	closeStale(data, Date.now(), 0);
 	loaded = true;
+	listeners.forEach((l) => l());
 	(Router.RunningApps ?? []).forEach((app) => start(Number(app.appid), 'Already running'));
 
 	SteamClient.Apps.RegisterForGameActionStart((_id, appId, _action, source) => pendingSource.set(Number(appId), sourceName(source)));
