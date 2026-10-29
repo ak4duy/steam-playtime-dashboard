@@ -48,7 +48,7 @@ const CSS = `
 .ptd-stat { padding: 16px 20px; min-width: 0; border-left: 1px solid var(--line); }
 .ptd-stat:first-child { border-left: 0; }
 .ptd-stat dt { font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
-.ptd-stat dd { margin: 0; font-size: 20px; font-weight: 700; color: var(--white); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ptd-stat dd { margin: 0; font-size: 20px; font-weight: 700; color: var(--white); overflow-wrap: anywhere; }
 .ptd-stat small { display: block; font-size: 13px; color: var(--muted); margin-top: 2px; }
 .ptd-grid { display: grid; align-items: stretch; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 16px; margin-bottom: 16px; }
 .ptd-pies { display: grid; align-items: stretch; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
@@ -369,7 +369,7 @@ function Stat({
   return (
     <div className="ptd-stat">
       <dt>{label}</dt>
-      <dd title={top?.[0]}>{value ?? top?.[0] ?? "—"}</dd>
+      <dd>{value ?? top?.[0] ?? "—"}</dd>
       {top && <small>{fmt(top[1])}</small>}
     </div>
   );
