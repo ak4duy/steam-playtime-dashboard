@@ -1,0 +1,49 @@
+name: Release
+
+on:
+  push:
+    branches: [master]
+    paths: [millennium.toml]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - id: version
+        run: |
+          version=$(sed -n 's/^version = "\(.*\)"/\1/p' millennium.toml | head -n1)
+          echo "tag=v$version" >> "$GITHUB_OUTPUT"
+          if gh release view "v$version" > /dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - if: steps.version.outputs.exists != 'true'
+        uses: oven-sh/setup-bun@v2
+
+      - if: steps.version.outputs.exists != 'true'
+        run: |
+          bun install --frozen-lockfile
+          mkdir dist
+          ./node_modules/.bin/starlight pack --release -o dist
+          cd dist && sha256sum *.star > SHA256SUM.txt
+
+      - if: steps.version.outputs.exists != 'true'
+        uses: orhun/git-cliff-action@v4
+        with:
+          args: --unreleased --tag ${{ steps.version.outputs.tag }} --strip all
+        env:
+          OUTPUT: notes.md
+          GITHUB_REPO: ${{ github.repository }}
+
+      - if: steps.version.outputs.exists != 'true'
+        run: gh release create "${{ steps.version.outputs.tag }}" dist/* --title "${{ steps.version.outputs.tag }}" --notes-file notes.md
