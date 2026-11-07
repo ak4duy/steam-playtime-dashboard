@@ -5,7 +5,7 @@
 A [Millennium](https://steambrew.app) plugin that logs every play session and turns it into a full-page dashboard, right inside the Steam client.
 
 ![Millennium](https://img.shields.io/badge/Millennium-%E2%89%A5%203.4.0-1b2838?style=flat-square)
-![Version](https://img.shields.io/badge/version-1.0.0-66c0f4?style=flat-square)
+![Version](https://img.shields.io/badge/version-1.0.1-66c0f4?style=flat-square)
 ![Built with Bun](https://img.shields.io/badge/built%20with-Bun-f9f1e1?style=flat-square&logo=bun&logoColor=black)
 ![License](https://img.shields.io/badge/license-MIT-a4d007?style=flat-square)
 
@@ -29,18 +29,33 @@ A [Millennium](https://steambrew.app) plugin that logs every play session and tu
 
 ## Install
 
-Requires **Millennium ≥ 3.4.0** and [**Bun**](https://bun.com).
+Requires **Millennium ≥ 3.4.0**.
+
+**From a release (recommended)**
+
+1. Download `steam-playtime-dashboard.star` from the [latest release](https://github.com/ak4duy/steam-playtime-dashboard/releases/latest)
+2. Put it in Millennium's plugins folder:
+   - Linux: `~/.local/share/millennium/plugins/`
+   - Windows: `C:\Program Files (x86)\Steam\plugins\`
+3. Restart Steam and enable **Playtime Dashboard** in Millennium settings
+
+**From source**
+
+Building needs [**Bun**](https://bun.com).
 
 ```bash
 bun install
 bun run build
 ```
 
-The build installs the plugin into Millennium. Then:
+The build installs the plugin into Millennium. Then enable **Playtime Dashboard** in Millennium settings and reload Steam.
 
-1. Enable **Playtime Dashboard** in Millennium settings
-2. Reload Steam
-3. Open the plugin's panel and click **Open dashboard**
+## Open the dashboard
+
+Either way works:
+
+- Steam's top menu: **Profile → Dashboard**
+- Millennium's plugin panel (`ctrl 2`): **Open dashboard**
 
 ## How tracking works
 
